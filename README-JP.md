@@ -1,6 +1,10 @@
 # mc-farming-bot
 マイクラ用簡易的な自動農業bot．
 
+# 動画
+クリックして再生
+[![preview](https://raw.githubusercontent.com/BonyChops/mc-farming-bot/main/images/1.png)](https://twitter.com/BonyChops/status/1424727252009246728)
+
 # 対応
 1.16.5で動作確認．1.17以上は非対応．
 
