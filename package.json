@@ -1,0 +1,17 @@
+{
+  "name": "mc-farming-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mineflayer": "^3.9.0",
+    "mineflayer-navigate": "^0.0.10",
+    "mineflayer-pathfinder": "^1.7.0"
+  }
+}
