@@ -1,6 +1,11 @@
 # mc-farming-bot
 The easy bot for farming in Minecraft.
 
+# Preview
+Click to play
+[![preview](https://raw.githubusercontent.com/BonyChops/mc-farming-bot/main/images/1.png)](https://twitter.com/BonyChops/status/1424727252009246728)
+
+
 # Supported
 I've tested with 1.16.5. Not supported for 1.17 or more.
 
