@@ -16,11 +16,11 @@ bot.loadPlugin(pathfinder)
 bot.on("goal_reached", () => {
     console.log("reached")
 })
-
+const limitOfSeeds = 16;
 
 
 const gotoPromise = async (p, mcData, nearPoint = 5) => (await new Promise(async (resolve, reject) => {
-    if(config.allowTp){
+    if (config.allowTp) {
         bot.chat(`/tp @s ${p.x} ${p.y} ${p.z}`);
         resolve();
         return;
@@ -59,9 +59,13 @@ const gotoPromise = async (p, mcData, nearPoint = 5) => (await new Promise(async
 const sleep = async (ms) => (await new Promise(resolve => { setTimeout(() => { resolve() }, ms) }));
 
 
-let mcData
+let mcData, isSleeping = false;
 bot.once('inject_allowed', () => {
     mcData = require('minecraft-data')(bot.version)
+})
+
+bot.on("wake", () => {
+    isSleeping = false;
 })
 
 
@@ -79,21 +83,21 @@ bot.once('spawn', () => {
         p2.y = p.y;
         p2.z = p.z;
     }
-   /*  setInterval(() => {
-        if (posCompare(bot.entity.position, botPos)
-            && posCompare(bot.entities.velocity, botV)) {
-            bot.chat("Bot stopped. Restarting...");
-            job();
-        }
-        posCopy(bot.entity.position, botPos);
-        posCopy(bot.entity.velocity, botV);
-    }, 5000); */
+    /*  setInterval(() => {
+         if (posCompare(bot.entity.position, botPos)
+             && posCompare(bot.entities.velocity, botV)) {
+             bot.chat("Bot stopped. Restarting...");
+             job();
+         }
+         posCopy(bot.entity.position, botPos);
+         posCopy(bot.entity.velocity, botV);
+     }, 5000); */
 
 })
 
 
 const chestInfo = {};
-let bed;
+let bed, craftingTable;
 let started = false;
 
 const job = async () => {
@@ -105,7 +109,7 @@ const job = async () => {
     await refreshChestInfo();
     const inventoryItems = bot.inventory.items();
     while (true) {
-        try{
+        try {
             await getWheats();
             //return;
             await farmJob();
@@ -113,7 +117,7 @@ const job = async () => {
             await refreshItems();
             await checker();
             //await sleep(1000);
-        }catch(e){
+        } catch (e) {
             console.log(e);
             bot.chat("Error occurred!: " + e.toString());
         }
@@ -122,24 +126,80 @@ const job = async () => {
 }
 
 const checker = async () => {
-    if (bot.time.timeOfDay >= 12000) {
+    if (bot.time.timeOfDay >= 12541 && bot.time.timeOfDay <= 23458) {
         await goBed();
     }
     console.log(bot.inventory.slots);
     if (bot.inventory.slots.filter(item => item === null).length < 2) {
         bot.chat("Max of Inventory Reached");
         await refreshItems();
-    } else {
-        console.log("ok")
+    }
+    const inventoryItems = bot.inventory.items();
+    const seedsInInventoryCount = inventoryItems.filter(item => item.type == mcData.itemsByName["wheat_seeds"].id).reduce((acc, item) => (acc + item.count), 0);
+    if (seedsInInventoryCount < limitOfSeeds) {
+        await refreshItems();
     }
 }
 
 const goBed = async () => {
+    if (bed === undefined) {
+        return;
+    }
     bot.chat("Time to sleep!")
     await gotoPromise(bed, mcData, 2);
-    try {
-        await bot.sleep(bot.blockAt(bed));
-    } catch (e) { }
+    await new Promise((resolve, reject) => {
+        isSleeping = true;
+        const flagChecker = setInterval(() => {
+            if (!isSleeping) {
+                bot.chat("おはよう！");
+                clearInterval(flagChecker);
+                resolve();
+            }
+        }, 500);
+        bot.sleep(bot.blockAt(bed)).catch(e => reject(e));
+    });
+}
+
+const craftHayBlock = async () => {
+    if (craftingTable === undefined) {
+        return;
+    }
+    const inventoryItems = bot.inventory.items();
+    const wheatsInInventoryCount = inventoryItems.filter(item => item.type == mcData.itemsByName["wheat"].id).reduce((acc, item) => (acc + item.count), 0);
+    console.log(wheatsInInventoryCount);
+    console.log(Math.floor(wheatsInInventoryCount / 9));
+    if (Math.floor(wheatsInInventoryCount / 9) <= 0) {
+        return;
+    }
+    await gotoPromise(craftingTable, mcData, 1);
+    //const recipe = bot.recipesFor(item.id, null, 1, craftingTable)[0]
+    const recipe = bot.recipesFor(mcData.itemsByName["hay_block"].id, null, 1, bot.blockAt(craftingTable))
+    console.log(recipe);
+    if (!recipe[0]) {
+        bot.chat("error: cant make");
+        console.log("error: cant make");
+        return;
+    }
+    console.log("ok");
+    await new Promise((resolve, reject) => {
+        const timeoutFunc = setTimeout(() => {
+            console.log("timed out")
+            clearTimeout(timeoutFunc);
+            resolve();
+        }, 3000 * Math.floor(wheatsInInventoryCount / 9));
+//await bot.craft(recipe, amount, craftingTable)
+        console.log(craftingTable);
+        console.log(bot.blockAt(craftingTable));
+        bot.craft(recipe[0],  Math.floor(wheatsInInventoryCount / 9), bot.blockAt(craftingTable), () => {
+            console.log("TASK DONE");
+            clearTimeout(timeoutFunc);
+            resolve();
+        })
+
+
+    })
+    console.log("craft done");
+    return;
 }
 
 const inventoryJobs = async (title, chest, inventoryItems, chestPos) => await (async (f) => (f === undefined ? (() => {
@@ -151,34 +211,39 @@ const inventoryJobs = async (title, chest, inventoryItems, chestPos) => await (a
         const seedsInChestCount = chest.containerItems().filter(item => item.type == mcData.itemsByName["wheat_seeds"].id).reduce((acc, item) => (acc + item.count), 0);
         const seedsInInventoryCount = inventoryItems.filter(item => item.type == mcData.itemsByName["wheat_seeds"].id).reduce((acc, item) => (acc + item.count), 0);
         //bot.chat("[" + chest.containerItems().map(item => item.displayName).join(", ") + "]")
-        if (seedsInChestCount < 64 && seedsInInventoryCount < 64) {
-            await chest.close();
-            console.log("Job done.");
-            bot.chat("Job done.");
-            throw "seed owata";
-        }
         if (seedsInInventoryCount < 64) {
-            await chest.withdraw(mcData.itemsByName["wheat_seeds"].id, null, 64);
+            if (seedsInChestCount > (64 * 3)) {
+                await chest.withdraw(mcData.itemsByName["wheat_seeds"].id, null, 64 * 3);
+            } else if (seedsInChestCount > 0) {
+                await chest.withdraw(mcData.itemsByName["wheat_seeds"].id, null, seedsInChestCount);
+            }
         }
     },
     "#wheats": async () => {
         console.log("#wheatsJob")
         if (chestInfo["#wheats"] === undefined) chestInfo["#wheats"] = chestPos;
         const wheatsInInventoryCount = inventoryItems.filter(item => item.type == mcData.itemsByName["wheat"].id).reduce((acc, item) => (acc + item.count), 0);
-        if (wheatsInInventoryCount > 0) await chest.deposit(mcData.itemsByName["wheat"].id, null, wheatsInInventoryCount);
+        const wheatsInChestCount = chest.containerItems().filter(item => item.type == mcData.itemsByName["wheat"].id).reduce((acc, item) => (acc + item.count), 0);
+        const hayBlocksInInventoryCount = inventoryItems.filter(item => item.type == mcData.itemsByName["hay_block"].id).reduce((acc, item) => (acc + item.count), 0);
+        console.log(wheatsInInventoryCount)
+        if (wheatsInInventoryCount > 0 && craftingTable === undefined) {
+            await chest.deposit(mcData.itemsByName["wheat"].id, null, wheatsInInventoryCount)
+        } else if (hayBlocksInInventoryCount > 0) {
+            await chest.deposit(mcData.itemsByName["hay_block"].id, null, hayBlocksInInventoryCount);
+        }
     },
     "#toComposter": async () => {
         if (chestInfo["#toComposter"] === undefined) chestInfo["#toComposter"] = chestPos;
         const seedsInInventoryCount = inventoryItems.filter(item => item.type == mcData.itemsByName["wheat_seeds"].id).reduce((acc, item) => (acc + item.count), 0);
         console.log(seedsInInventoryCount)
-        if (seedsInInventoryCount > 64) {
-            console.log(seedsInInventoryCount - 64)
-            try{
+        if (seedsInInventoryCount > (64 * 3)) {
+            console.log(seedsInInventoryCount - (64 * 3))
+            try {
                 await new Promise((resolve, reject) => {
                     const timeChecker = setTimeout(() => {
                         resolve("timed out");
                     }, 3000)
-                    chest.deposit(mcData.itemsByName["wheat_seeds"].id, null, seedsInInventoryCount - 64, (err) => {
+                    chest.deposit(mcData.itemsByName["wheat_seeds"].id, null, seedsInInventoryCount - (64 * 3), (err) => {
                         if (err) {
                             reject(err);
                             return;
@@ -187,7 +252,7 @@ const inventoryJobs = async (title, chest, inventoryItems, chestPos) => await (a
                         resolve();
                     })
                 });
-            }catch(e){console.log(e)}
+            } catch (e) { console.log(e) }
         }
         console.log("done")
     }
@@ -211,25 +276,44 @@ const refreshChestInfo = async () => {
         const inventoryItems = bot.inventory.items();
         const chest = await bot.openContainer(bot.blockAt(chestPos));
         const title = JSON.parse(chest.title).text;
-        console.log(title)
+        console.log(title);
+        if (title !== undefined) {
+            bot.chat(`${title} detected`);
+        }
 
         await inventoryJobs(title, chest, inventoryItems, chestPos);
-        //await sleep(100);
+        //await sleep(500);
         await chest.close();
     }
     const tmpBed = bot.findBlock({
         matching: mcData.blocksByName["white_bed"].id,
-        maxDistance: 256,
-        count: 256
+        maxDistance: 256
     })
-    console.log(tmpBed.position)
-    await gotoPromise(tmpBed.position, mcData);
-    bed = tmpBed.position;
+    if (tmpBed !== null) {
+        console.log(tmpBed.position)
+        await gotoPromise(tmpBed.position, mcData, 1);
+        bot.chat(`bed detected`);
+        bed = tmpBed.position;
+    }
+
+    const tmpCraftingTable = bot.findBlock({
+        matching: mcData.blocksByName["crafting_table"].id,
+        maxDistance: 30
+    })
+    if (tmpCraftingTable !== null) {
+        await gotoPromise(tmpCraftingTable.position, mcData, 1);
+        bot.chat(`crafting table detected`);
+        console.log(tmpCraftingTable)
+        craftingTable = tmpCraftingTable.position;
+    }
+    bot.chat("Scanning completed!")
 }
 
 const refreshItems = async () => {
     const chestNames = ["#seeds", "#wheats", "#toComposter"];
-
+    const inventoryItems = bot.inventory.items();
+    await craftHayBlock();
+    console.log("done")
     for (chestName of chestNames) {
         try {
             await gotoPromise(chestInfo[chestName], mcData);
@@ -237,12 +321,12 @@ const refreshItems = async () => {
             console.log("error");
             continue;
         }
-        const inventoryItems = bot.inventory.items();
         const chest = await bot.openContainer(bot.blockAt(chestInfo[chestName]));
         await inventoryJobs(chestName, chest, inventoryItems, chestInfo[chestName]);
-       // await sleep(100);
+        //await sleep(500);
         await chest.close();
     }
+    //await craftHayBlock();
 }
 
 const getWheats = async () => {
@@ -290,6 +374,8 @@ const getWheats = async () => {
 }
 
 const farmJob = async () => {
+    const inventoryItems = bot.inventory.items();
+    const seedsInInventoryCount = inventoryItems.filter(item => item.type == mcData.itemsByName["wheat_seeds"].id).reduce((acc, item) => (acc + item.count), 0);
     const wheatPlaces = bot.findBlocks({
         matching: mcData.blocksByName["wheat"].id,
         maxDistance: 256,
@@ -299,7 +385,8 @@ const farmJob = async () => {
         matching: mcData.blocksByName["farmland"].id,
         maxDistance: 256,
         count: 1000
-    }).filter(fp => !wheatPlaces.some(wp => wp.x == fp.x && wp.y == fp.y + 1 && wp.z == fp.z));
+    }).filter(fp => !wheatPlaces.some(wp => wp.x == fp.x && wp.y == fp.y + 1 && wp.z == fp.z))
+        .filter((v, i) => i < (seedsInInventoryCount - limitOfSeeds));
     placeToFarm.forEach(blocks => blocks.y += 1);
     for (const farmPos of placeToFarm) {
         try {

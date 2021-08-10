@@ -11,7 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "mineflayer": "^3.9.0",
+    "mineflayer": "github:PrismarineJS/mineflayer",
     "mineflayer-navigate": "^0.0.10",
     "mineflayer-pathfinder": "^1.7.0"
   }
