@@ -9,7 +9,7 @@ const bot = mineflayer.createBot({
     port: config.port == undefined ? 25565 : config.host,
     username: config.offline ? "Bony_Bot" : config.username,
     password: config.offline ? undefined : config.password,
-    auth: config.offline ? undefined : 'mojang'
+    auth: config.auth === undefined ? 'mojang' : config.auth
 });
 bot.loadPlugin(pathfinder)
 
