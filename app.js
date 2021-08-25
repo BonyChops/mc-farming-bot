@@ -130,7 +130,7 @@ const checker = async () => {
         await goBed();
     }
     console.log(bot.inventory.slots);
-    if (bot.inventory.slots.filter(item => item === null).length < 2) {
+    if (bot.inventory.slots.filter(item => item === null).length < (2 + 9)) {
         bot.chat("Max of Inventory Reached");
         await refreshItems();
     }
@@ -261,9 +261,31 @@ const inventoryJobs = async (title, chest, inventoryItems, chestPos) => await (a
 const refreshChestInfo = async () => {
     const chests = bot.findBlocks({
         matching: mcData.blocksByName["chest"].id,
-        maxDistance: 256,
+        maxDistance: 15,
         count: 256
     })
+    const tmpBed = bot.findBlock({
+        matching: mcData.blocksByName["white_bed"].id,
+        maxDistance: 15
+    })
+    if (tmpBed !== null) {
+        console.log(tmpBed.position)
+        await gotoPromise(tmpBed.position, mcData, 1);
+        bot.chat(`bed detected`);
+        bed = tmpBed.position;
+    }
+
+    /* const tmpCraftingTable = bot.findBlock({
+        matching: mcData.blocksByName["crafting_table"].id,
+        maxDistance: 15
+    }) */
+
+    if (tmpCraftingTable !== null) {
+        await gotoPromise(tmpCraftingTable.position, mcData, 1);
+        bot.chat(`crafting table detected`);
+        console.log(tmpCraftingTable)
+        craftingTable = tmpCraftingTable.position;
+    }
     for (const chestPos of chests) {
         const chestPosNear = JSON.parse(JSON.stringify(chestPos));
         chestPosNear.x += 1;
@@ -285,27 +307,8 @@ const refreshChestInfo = async () => {
         //await sleep(500);
         await chest.close();
     }
-    const tmpBed = bot.findBlock({
-        matching: mcData.blocksByName["white_bed"].id,
-        maxDistance: 256
-    })
-    if (tmpBed !== null) {
-        console.log(tmpBed.position)
-        await gotoPromise(tmpBed.position, mcData, 1);
-        bot.chat(`bed detected`);
-        bed = tmpBed.position;
-    }
 
-    const tmpCraftingTable = bot.findBlock({
-        matching: mcData.blocksByName["crafting_table"].id,
-        maxDistance: 30
-    })
-    if (tmpCraftingTable !== null) {
-        await gotoPromise(tmpCraftingTable.position, mcData, 1);
-        bot.chat(`crafting table detected`);
-        console.log(tmpCraftingTable)
-        craftingTable = tmpCraftingTable.position;
-    }
+
     bot.chat("Scanning completed!")
 }
 
