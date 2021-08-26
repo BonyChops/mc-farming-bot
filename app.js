@@ -279,6 +279,7 @@ const refreshChestInfo = async () => {
         matching: mcData.blocksByName["crafting_table"].id,
         maxDistance: 15
     }) */
+    const tmpCraftingTable = null;
 
     if (tmpCraftingTable !== null) {
         await gotoPromise(tmpCraftingTable.position, mcData, 1);
