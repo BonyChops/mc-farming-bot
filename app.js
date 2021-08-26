@@ -6,7 +6,7 @@ const fs = require('fs');
 const config = JSON.parse(fs.readFileSync("config.json"));
 const bot = mineflayer.createBot({
     host: config.host,
-    port: config.port == undefined ? 25565 : config.host,
+    port: config.port == undefined ? 25565 : config.port,
     username: config.offline ? "Bony_Bot" : config.username,
     password: config.offline ? undefined : config.password,
     auth: config.auth === undefined ? 'mojang' : config.auth
