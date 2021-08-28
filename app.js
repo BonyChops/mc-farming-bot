@@ -20,6 +20,9 @@ const limitOfSeeds = 16;
 
 
 const gotoPromise = async (p, mcData, nearPoint = 5) => (await new Promise(async (resolve, reject) => {
+    if (p === undefined || p.x === undefined) {
+        return;
+    }
     if (config.allowTp) {
         bot.chat(`/tp @s ${p.x} ${p.y} ${p.z}`);
         resolve();
@@ -68,6 +71,9 @@ bot.on("wake", () => {
     isSleeping = false;
 })
 
+const posCompare = (p, p2) => {
+    return p.x === p2.x && p.y === p2.y && p.z === p2.z;
+}
 
 bot.once('spawn', () => {
     // mineflayerViewer(bot, { port: 3007, firstPerson: false })
@@ -75,9 +81,7 @@ bot.once('spawn', () => {
     bot.chat("Logged in");
     job();
     let botPos = {}, botV = {};
-    const posCompare = (p, p2) => {
-        return p.x === p2.x && p.y === p2.y && p.z === p2.z;
-    }
+
     const posCopy = (p, p2) => {
         p2.x = p.x;
         p2.y = p.y;
@@ -187,10 +191,10 @@ const craftHayBlock = async () => {
             clearTimeout(timeoutFunc);
             resolve();
         }, 3000 * Math.floor(wheatsInInventoryCount / 9));
-//await bot.craft(recipe, amount, craftingTable)
+        //await bot.craft(recipe, amount, craftingTable)
         console.log(craftingTable);
         console.log(bot.blockAt(craftingTable));
-        bot.craft(recipe[0],  Math.floor(wheatsInInventoryCount / 9), bot.blockAt(craftingTable), () => {
+        bot.craft(recipe[0], Math.floor(wheatsInInventoryCount / 9), bot.blockAt(craftingTable), () => {
             console.log("TASK DONE");
             clearTimeout(timeoutFunc);
             resolve();
@@ -259,11 +263,17 @@ const inventoryJobs = async (title, chest, inventoryItems, chestPos) => await (a
 }[title])
 
 const refreshChestInfo = async () => {
+    const allEntities = [];
+    bot.nearestEntity((entity) => {
+        allEntities.push(entity)
+    });
+    const itemFrames = allEntities.filter(entity => entity.name === "item_frame");
+
     const chests = bot.findBlocks({
         matching: mcData.blocksByName["chest"].id,
         maxDistance: 15,
         count: 256
-    })
+    }).filter(chestPos => itemFrames.some(entity => posCompare(chestPos, blockPosFromEntity(entity))));
     const tmpBed = bot.findBlock({
         matching: mcData.blocksByName["white_bed"].id,
         maxDistance: 15
@@ -331,6 +341,18 @@ const refreshItems = async () => {
         await chest.close();
     }
     //await craftHayBlock();
+}
+
+const blockPosFromEntity = (entity) => {
+    const angle = entity.yaw / Math.PI;
+    const p = JSON.parse(JSON.stringify(entity.position));
+    ({
+        0: () => p.z += 1,
+        0.5: () => p.x += 1,
+        1: () => p.z -= 1,
+        1.5: () => p.x -= 1
+    }[angle])();
+    return p;
 }
 
 const getWheats = async () => {
