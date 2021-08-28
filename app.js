@@ -1,7 +1,9 @@
 const mineflayer = require('mineflayer');
-const pathfinder = require('mineflayer-pathfinder').pathfinder
-const Movements = require('mineflayer-pathfinder').Movements
-const { GoalNear, GoalBlock } = require('mineflayer-pathfinder').goals
+const pathfinder = require('mineflayer-pathfinder').pathfinder;
+const Movements = require('mineflayer-pathfinder').Movements;
+const { GoalNear, GoalBlock } = require('mineflayer-pathfinder').goals;
+const mineflayerViewer = require('prismarine-viewer').mineflayer
+
 const fs = require('fs');
 const config = JSON.parse(fs.readFileSync("config.json"));
 const bot = mineflayer.createBot({
@@ -76,7 +78,7 @@ const posCompare = (p, p2) => {
 }
 
 bot.once('spawn', () => {
-    // mineflayerViewer(bot, { port: 3007, firstPerson: false })
+    mineflayerViewer(bot, { port: 3007, firstPerson: false })
     bot.chat("こんにちは，Bony_Botです :) 製鉄所でバイトしてます．エラー吐いたらBony_Chopsに教えてくれるとうれしいな☆");
     bot.chat("Logged in");
     job();

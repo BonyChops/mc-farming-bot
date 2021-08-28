@@ -13,6 +13,7 @@
   "dependencies": {
     "mineflayer": "github:PrismarineJS/mineflayer",
     "mineflayer-navigate": "^0.0.10",
-    "mineflayer-pathfinder": "github:PrismarineJS/mineflayer-pathfinder"
+    "mineflayer-pathfinder": "github:PrismarineJS/mineflayer-pathfinder",
+    "prismarine-viewer": "^1.19.3"
   }
 }
